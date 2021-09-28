@@ -29,26 +29,27 @@ struct dev_proc_info SPEAKER_OUT_NAME[] = /* add codes& dai name here*/
     {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
 };
 
-#define min(a, b) (a > b ? b : a)
+/* Levenshtein distance 
+ */
+#define minimum(a, b) (a > b ? b : a)
 float match_score(const char* str1, const char *str2)
 {
-        int idx , idy, temp;
+        char idx , idy, temp;
         float similarity;
         int len1;
         int len2;
         int v1, v2, v3;
-        int dif[64][64]  = {0};
+        char dist[64][64]  = {0};
 
         len1 = strlen(str1);
         len2 = strlen(str2);
-        if (len1 > 64 || len2 > 64 ) {
-            return -1; /* limit of string large than 64 */
-        }
+        len1 = len1 > 63 ? 63 : len1;
+        len2 = len2 > 63 ? 63 : len2; /* only compare string less than 64 */
         for (idx = 0; idx <= len1; idx++) {
-            dif[idx][0] = idx;
+            dist[idx][0] = idx;
         }
         for (idx = 0; idx <= len2; idx++) {
-            dif[0][idx] = idx;
+            dist[0][idx] = idx;
         }
         for (idx = 1; idx <= len1; idx++) {
             for (idy = 1; idy <= len2; idy++) {
@@ -57,32 +58,28 @@ float match_score(const char* str1, const char *str2)
                 } else {
                     temp = 1;
                 }
-                v1 = dif[idx - 1][idy - 1] + temp;
-                v2 = dif[idx][idy - 1] + 1;
-                v3 = dif[idx - 1][idy] + 1;
-                dif[idx][idy] = min(min(v1, v2), v3);
+                v1 = dist[idx - 1][idy - 1] + temp;
+                v2 = dist[idx][idy - 1] + 1;
+                v3 = dist[idx - 1][idy] + 1;
+                dist[idx][idy] = minimum(minimum(v1, v2), v3);
             }
         }
-        //printf("compare %s with %s\n", str1, str2);
-        //printf("diff： %d\n", dif[len1][len2]);
-        similarity =1 - (float) dif[len1][len2] / (len1 > len2 ? len1 : len2);
-        //printf("degree：%f\n", similarity);
+        similarity =1 - (float) dist[len1][len2] / (len1 > len2 ? len1 : len2);
         return similarity;
 }
+#undef minimum
 
 int main(int argc, char *argv[])
 {
     float v;
-    int i;
-    int arr_size;
-    const char *str;
+    const char *stra, *strb;
 
-    printf("enter...\n");
-    str = "rockchipes8316";
-    arr_size =  sizeof(SPEAKER_OUT_NAME)/ sizeof(SPEAKER_OUT_NAME[0]);
-    for (i = 0; i < arr_size; i ++) {
-        v = match_score(SPEAKER_OUT_NAME[i].cid, str);
-        printf("match %s with %s degree：%f\n", SPEAKER_OUT_NAME[i].cid, str, v);
+    if (argc < 3) {
+        printf("Usage: strA strB%s\n", argv[0]); 
     }
+    stra = argv[1];
+    strb = argv[2];
+    v = match_score(stra, strb);
+    printf("match %s with %s degree：%f\n", stra, strb, v);
     return 0;
 }
